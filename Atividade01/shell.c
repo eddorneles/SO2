@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-/* MARK NAME Seu Nome Aqui */
+/* MARK NAME Eduardo Dorneles Ferreira de Souza */
 /* MARK NAME Nome de Outro Integrante Aqui */
 /* MARK NAME E Etc */
 
@@ -21,7 +21,7 @@
 
 #define MAXARGS 10
 
-/* Todos comandos tem um tipo.  Depois de olhar para o tipo do
+/* Todos comandos têm um tipo.  Depois de olhar para o tipo do
  * comando, o código converte um *cmd para o tipo específico de
  * comando. */
 struct cmd {
@@ -106,9 +106,17 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-    if (isatty(fileno(stdin)))
+    /* fileno retorna o inteiro que identifica o descritor de arquivo*/
+    /* e a função isatty é responsável por verificar se o inteiro que identifica
+    um descritor de arquivo, referência a um terminal */
+    if ( isatty(fileno(stdin)) )
         fprintf(stdout, "$ ");
+    /* memset(str, c, n), copia c, em n posições de str
+        nesse caso, inicializa o buffer com 0, ou seja valores NULL, pois buf é
+        char [] */
     memset(buf, 0, nbuf);
+    /*fgets lê do descritor de arquivo(por isso fgets() ) stdin (entrada padrão) e
+    copia para buf */
     fgets(buf, nbuf, stdin);
     if(buf[0] == 0) // EOF
         return -1;
@@ -122,15 +130,19 @@ main(void)
     int r;
 
     // Ler e rodar comandos.
-    while(getcmd(buf, sizeof(buf)) >= 0){
+    while( getcmd(buf, sizeof(buf) ) >= 0){
         /* MARK START task1 */
         /* TAREFA1: O que faz o if abaixo e por que ele é necessário?
          * Insira sua resposta no código e modifique o fprintf abaixo
          * para reportar o erro corretamente. */
+         /*MARK RESPOSTA task1:
+                O if abaixo verifica se o comando dado como
+                entrada é um comando de mudança de diretório.
+         */
         if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
             buf[strlen(buf)-1] = 0;
         if(chdir(buf+3) < 0)
-            fprintf(stderr, "reporte erro\n");
+            fprintf(stderr, "Nenhum diretório foi especificado\n");
             continue;
         }
         /* MARK END task1 */
@@ -211,10 +223,10 @@ gettoken(char **ps, char *es, char **q, char **eq)
 
     s = *ps;
     while(s < es && strchr(whitespace, *s))
-    s++;
+        s++;
     if(q)
         *q = s;
-  ret = *s;
+    ret = *s;
     switch(*s){
     case 0:
     break;
@@ -232,7 +244,9 @@ gettoken(char **ps, char *es, char **q, char **eq)
     break;
     }
     if(eq)
-        *eq = s;
+        *eq = s; /* eq é um ponteiro **, portanto *eq aponta para o endereço s
+                    eq é retornado por referência
+                    */
 
     while(s < es && strchr(whitespace, *s))
         s++;
