@@ -254,14 +254,16 @@ gettoken(char **ps, char *es, char **q, char **eq)
     int ret;
 
     s = *ps;
-    /* Enquanto s não percorre todo *ps e há somente whitespace em *s */
+    /* Enquanto s não é totalmente varrido e há somente whitespace em *s */
     while(s < es && strchr(whitespace, *s))
         s++;
     /* Se q apontará para NULL, não faz nada, quando chamado por parseredirs, q = 0 */
-    if(q)
+    if(q){
     /* *q apontará para a primeira ocorrência de um caractere diferente de whitespace
-        ou NULL */
+        ou NULL diferente do primeiro comando */
         *q = s;
+        printf("Valor de s:%c &s:%d\nValor de q:%c &q:%d\n" , *s , s, **q , *q );
+    }
     ret = *s;
     switch(*s){
     case 0:
@@ -319,10 +321,10 @@ peek(char **ps, char *es, char *toks)
     /* strchr() procura a primeira ocorrência de s em whitespace*/
     /* Enquanto o endereço o qual s aponta for menor que endereço apontado por es
         (lembrando que es aponta para o último endereço que compreende o
-        ps(buffer) ) E houver equivalência entre algum elemento de s com whitespace
+        *ps(buffer) ) E houver equivalência entre algum elemento de s com whitespace
         (ver acima quais elementos pertencem à whitespace).
-        Ao sair do while o s aponta para NULL ou s possui somente elmentos iguais
-        à whitespace.
+        Ao sair do while o s apontará para NULL ou para alguma caracter diferente
+        de whitespace.
      */
     while( s < es && strchr(whitespace, *s))
         s++;
@@ -407,16 +409,16 @@ parseredirs( struct cmd *cmd, char **ps, char *es)
         if(gettoken(ps, es, &q, &eq) != 'a') {
             fprintf(stderr, "missing file for redirection\n");
             exit(-1);
-    }
-    switch(tok){
-    case '<':
-        cmd = redircmd(cmd, mkcopy(q, eq), '<');
-        break;
-    case '>':
-        cmd = redircmd(cmd, mkcopy(q, eq), '>');
-        break;
-    }
-  }
+        }
+        switch(tok){
+        case '<':
+            cmd = redircmd(cmd, mkcopy(q, eq), '<');
+            break;
+        case '>':
+            cmd = redircmd(cmd, mkcopy(q, eq), '>');
+            break;
+        }
+    }/* END while */
     return cmd;
 }
 
@@ -438,8 +440,8 @@ parseexec(char **ps, char *es)
 
     argc = 0;
     ret = parseredirs(ret, ps, es); /* ret (struct cmd*) que havia sido passado como parâmetro */
-    /* Se não houver nenhum elemento em *ps que contenha "|" */
-    while( !peek(ps, es, "|") ){
+    /* Enquanto não houver nenhum elemento em *ps que contenha "|" */
+    while( !peek( ps, es, "|") ){
         if( (tok=gettoken(ps, es, &q, &eq) ) == 0)
             break;
         if(tok != 'a') {
@@ -448,6 +450,7 @@ parseexec(char **ps, char *es)
         }
         cmd->argv[argc] = mkcopy(q, eq); /* retorna o endereço string do comando */
         argc++;
+        printf( "Número de elementos em arc:%d\n%s\n%s\n" , argc ,*ps , es );
         if(argc >= MAXARGS) {
             fprintf(stderr, "too many args\n");
             exit(-1);
