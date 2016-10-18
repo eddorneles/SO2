@@ -1,8 +1,8 @@
-#Algumas Dicas para implementação
+#Algumas Dicas e Lembretes para Implementação da atividade
 
 ##Passos para comunicação por sockets do SERVIDOR:
     1. Criar socket com socket()
-    2. Associar o socket a um endereço com bind(), portanto
+    2. Associar o socket a um endereço com bind()
     3. Esperar por conexões com listen()
     4. Aceitar uma conexão com accept(), essa chamada é bloqueante
 
@@ -12,7 +12,7 @@
     3. Enviar e receber dados usando read() e write()
 
 
-A função socket() cria uma interface de comunicação
+##A função socket() cria uma interface de comunicação
     RECEBE três parâmetros:
         family: PF_INET -> Comunicação sobre a internet, usa endereço de rede (mesmo AF_INET)
                 PF_UNIX -> Comunicação local na máquina, usa endereço de arquivos
