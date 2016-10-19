@@ -55,10 +55,10 @@ int main( int argc , char **argv ){
     printf("Terminou a execução com sucesso!\n" );
 }
 
-void startingExecution( int *socket_file_descriptor, int *port_number,
+void startingExecution( int *socket_fd , int *port_number,
     struct sockaddr_in *server_address, struct sockaddr_in *client_address ){
 
-    *socket_file_descriptor = socket( PF_INET , SOCK_STREAM , 0 );
+    *socket_fd = socket( PF_INET , SOCK_STREAM , 0 );
 
     /* Se não foi possível criar um socket */
     if( socket < 0 ){
@@ -69,7 +69,37 @@ void startingExecution( int *socket_file_descriptor, int *port_number,
     memset( (void *) server_address , 0 , sizeof(server_address) );
     printf( "Entre com a porta que o servidor deverá escutar: ");
     scanf( "%d" , port_number );
-    server_address->sin_family = PF_INET; /* Especifica que será comunicação pela rede */
+    setUpNetworkAddress( &server_address , *port_number );
+    /* bind() associa o endereço (server_address) ao socket,
+        também chamado de atribuição de nomeação ao socket */
+    if( bind( *socket_fd , (struct sockaddr *) server_address, sizeof(server_address) ) < 0 ){
+        error( "ERRO ao atribuir nome ao socket" );
+    }
+
+}
+
+/******************************************************************************
+settingUpNetworkAddress()
+Configura a struct responsável pelo endereço de rede(struct sockaddr_in)
+para que seja utilizado corretamente nas system calls de socket
+RETORNA
+    ->address por REFERÊNCIA, de forma que esteja com todos os campos com os
+            valores para o bind()
+*******************************************************************************/
+void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
+    if( sockaddr_in != NULL ){
+        address->sin_family = PF_INET;
+         /* o número da porta deve ser convertido para ordem de bytes de rede */
+        address->sin_port = htons(port_number);
+        /* Contém endereço IP do host, no caso do servidor é o IP dele mesmo
+            nesse caso, INADDR_ANY retorna o IP local */
+        address->sin_addr->s_addr = INADDR_ANY;
+    }
+    return;
+}
 
 
+void error( char * msg){
+    perror( msg );
+    exit(1);
 }
