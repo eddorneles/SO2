@@ -28,8 +28,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 void startingExecution( int *socket_file_descriptor, int *port_number,
         struct sockaddr_in *server_address );
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number );
-void stablishConnection( int socket_fd , int port_number ,
-    struct sockaddr_in *server_address, struct sockaddr_in *client_address );
+int stablishConnection( int socket_fd , struct sockaddr_in *client_address );
 void error( char * msg );
 
 int main( int argc , char **argv ){
@@ -43,7 +42,7 @@ int main( int argc , char **argv ){
     struct sockaddr_in server_address , client_address;
 
     startingExecution( &socket_server_id , &port_number, &server_address );
-    stablishConnection( socket_server_id , port_number, &server_address, &client_address);
+    stablishConnection( socket_server_id , &client_address);
     /* Comentários temporários para teste
     printf( "Entre com o número de kbytes de cada mensagem, zero para um byte: " );
     scanf( "%d" , &msg_length );
@@ -59,6 +58,19 @@ int main( int argc , char **argv ){
     printf("Terminou a execução com sucesso!\n" );
 }
 
+/*******************************************************************************
+startingExecution()
+Cria um socket para o servidor e prepara o endereço de rede do servidor
+chamando a função setUpNetworkAddress(), ao término da execução o servidor
+está apto para a função stablishConnection()
+
+RETORNA
+    int *socket_fd (REFERÊNCIA): inteiro que identifica o descritor de arquivo
+        do socket do servidor
+    int *port_number (REFERÊNCIA): número da porta que o servidor se comunicará
+    struct sockaddr_in *server_address(REFERÊNCIA): struct com endereço de rede
+        do servidor de configurado para comunicação via sockets
+*******************************************************************************/
 void startingExecution( int *socket_fd , int *port_number,
         struct sockaddr_in *server_address ){
 
@@ -105,17 +117,45 @@ void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
     return;
 }
 
-void stablishConnection( int socket_fd , int port_number ,
-        struct sockaddr_in *server_address, struct sockaddr_in *client_address ){
-    int a;
 
-    if( socket_fd > 0 && server_address != NULL && client_address != NULL ){
-        /* listen faz o processo aguardar comunicações no socket_fd, e o
-        segundo parâmetro é a quantidade de conexões que o processo pode aguardar */
-        printf("Chegou ao listen\n" );
+/******************************************************************************
+stablishConnection()
+Estabelece uma conexão entre um cliente e o servidor. Ao estabelecer a conexão
+o socket_fd (socket que escuta no lado servidor), irá direcionar a um novo
+socket que de fato manterá a comunicação por mensagens entre o cliente e o
+servidor (slave_socket).
+RECEBE
+    int socket_fd: socket do servidor que escuta novas requisições de
+        conexão.
+    struct sockaddr_in *client_address: Endereço do cliente que conectará,
+        é retornado por referêcia
+RETORNA
+    int slave_socket: O inteiro que representa o novo socket pelo qual a
+        comunicação será mantida
+        -1 se ocorreu algum erro no momento do accept()
+******************************************************************************/
+int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
+    int client_length; /* tamanho da struct de endereço do cliente */
+    int slave_socket=-1;
+
+    if( socket_fd > 0 && client_address != NULL ){
+        /* listen faz o socket se tornar um socket passivo para aguardar
+        comunicações em socket_fd, o segundo parâmetro é a quantidade de
+        conexões que o processo pode aguardar */
         listen( socket_fd , 5 );
-        printf("Passou do listen\n" );
+        client_length = sizeof( *client_address );
+        /* A chamada accept bloqueia o processo até que uma comunicação seja
+            estabelecida com sucesso, ele retornará o descritor de arquivo
+            do novo socket, pois toda a comunicação será feita a partir desse
+            novo socket */
+        printf( "Aguarda requisição de conexão, para então criar novo socket\n");
+        slave_socket = accept( socket_fd , (struct sockaddr *) client_address, &client_length);
+        if( slave_socket < 0 ){
+            error( "Erro ao aceitar nova comunicação");
+        }
     }
+    /* retorna o inteiro que representa o descritor do novo socket */
+    return slave_socket;
 
 }
 
