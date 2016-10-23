@@ -23,10 +23,9 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 
 #define ONE_KB 1024
 #define ITERATIONS 1000
-#define BUFFER_LENGTH 256
 
 void startingExecution( int *socket_file_descriptor, int *port_number,
-        struct sockaddr_in *server_address );
+        struct sockaddr_in *server_address , char *buffer ,int *msg_length );
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number );
 int stablishConnection( int socket_fd , struct sockaddr_in *client_address );
 void error( char * msg );
@@ -37,25 +36,21 @@ int main( int argc , char **argv ){
         port_number = 0, /* armazena o número que o servidor escutar */
         client_addr_len, /* tamanho do endereço do cliente */
         nbytes_read; /* número de bytes lidos ou escritos */
-    char buffer[BUFFER_LENGTH];
+    char *buffer;
     /* struct sockaddr_in contém endereço de rede */
     struct sockaddr_in server_address , client_address;
 
-    startingExecution( &socket_server_id , &port_number, &server_address );
-    stablishConnection( socket_server_id , &client_address);
-    /* Comentários temporários para teste
-    printf( "Entre com o número de kbytes de cada mensagem, zero para um byte: " );
-    scanf( "%d" , &msg_length );
-    */
-    if( msg_length == 0 ){
-        msg_length = 1;
-    }else{
-        msg_length *= ONE_KB;
+    startingExecution( &socket_server_id , &port_number, &server_address, &msg_length );
+    int slave_socket = stablishConnection( socket_server_id , &client_address );
+    /* Se foi criado um socket escravo para comunicar com o cliente */
+    if( slave_socket > 0 ){
+        memset ( buffer , 0 , msg_length );
+
     }
     if( socket_server_id != -1 ){
         close( socket_server_id );
     }
-    printf("Terminou a execução com sucesso!\n" );
+    printf( "Terminou a execução com sucesso!\n" );
 }
 
 /*******************************************************************************
@@ -70,19 +65,35 @@ RETORNA
     int *port_number (REFERÊNCIA): número da porta que o servidor se comunicará
     struct sockaddr_in *server_address(REFERÊNCIA): struct com endereço de rede
         do servidor de configurado para comunicação via sockets
+    char *buffer (REFERÊNCIA): endereço do buffer alocado dinamicamente
+    int *msg_length (REFERÊNCIA): endereço da variável que armazena o tamanho
+            das mensagens (e do buffer).
 *******************************************************************************/
 void startingExecution( int *socket_fd , int *port_number,
-        struct sockaddr_in *server_address ){
+        struct sockaddr_in *server_address , char *buffer , int *msg_length ){
 
     *socket_fd = socket( PF_INET , SOCK_STREAM , 0 );
 
     /* Se não foi possível criar um socket */
     if( socket < 0 ){
-        perror("ERRO ao abrir socket\n");
-        exit(1);
+        error("ERRO ao abrir socket");
     }
     /* memset seta todos os valores de server_address para 0 */
     memset( server_address , 0 , sizeof(server_address) );
+    printf( "Entre com o tamanho em kbytes de cada mensagem\n" ,
+            "Para mensagem de um byte, entre com zero: " );
+    scanf( "%d" , msg_length );
+    if( msg_length == 0 ){
+        msg_length = 1;
+    }else if( msg_length > 0 ){
+        msg_length *= ONE_KB;
+        buffer = (char *) malloc( sizeof(char) * (*msg_length)  );
+        if( buffer == NULL ){
+            error( "Não foi possível alocar memória para o buffer" );
+        }
+    }else{
+        error( "Tamanho de messagem inválido" );
+    }
     printf( "Entre com a porta que o servidor deverá escutar: ");
     scanf( "%d" , port_number );
     setUpNetworkAddress( server_address , *port_number );
@@ -117,7 +128,6 @@ void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
     return;
 }
 
-
 /******************************************************************************
 stablishConnection()
 Estabelece uma conexão entre um cliente e o servidor. Ao estabelecer a conexão
@@ -128,11 +138,13 @@ RECEBE
     int socket_fd: socket do servidor que escuta novas requisições de
         conexão.
     struct sockaddr_in *client_address: Endereço do cliente que conectará,
-        é retornado por referêcia
+        é retornado por referência
 RETORNA
     int slave_socket: O inteiro que representa o novo socket pelo qual a
         comunicação será mantida
         -1 se ocorreu algum erro no momento do accept()
+    struct sockaddr_in *client_address(REFERÊNCIA): Endereço do cliente que conectará,
+            é retornado por referência
 ******************************************************************************/
 int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
     int client_length; /* tamanho da struct de endereço do cliente */
@@ -156,6 +168,21 @@ int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
     }
     /* retorna o inteiro que representa o descritor do novo socket */
     return slave_socket;
+
+}
+
+int communicationService( int slave_socket , struct sockaddr_in *client_address,
+        char *buffer , int msg_length ){
+    int cur_iteration = 0;
+
+    /* Validação dos parâmetros da função */
+    if( server_socket > 0 && client_socket > 0 && client_address != NULL && buffer != NULL){
+        while( cur_iteration < ITERATIONS ){
+            num_chars = read( slave_socket , buffer , msg_length );
+            write( slave_socket ,  );
+
+        }
+    }
 
 }
 
