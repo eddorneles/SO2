@@ -183,12 +183,12 @@ int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
 
 int communicationService( int slave_socket , struct sockaddr_in *client_address,
         char *buffer , int msg_length ){
-    int cur_iteration = 0, num_chars=0;
+    int cur_iteration = 1;
 
     /* Validação dos parâmetros da função */
     if( slave_socket > 0 && client_address != NULL && client_address != NULL && buffer != NULL ){
-        while( cur_iteration < ITERATIONS ){
-            num_chars = read( slave_socket , buffer , msg_length );
+        while( cur_iteration <= ITERATIONS ){
+            read( slave_socket , buffer , msg_length );
             /* Deve enviar a mensagem de volta para o cliente */
             write( slave_socket , buffer , msg_length );
             cur_iteration++;
