@@ -24,10 +24,13 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 #define ONE_KB 1024
 #define ITERATIONS 1000
 
-void startingExecution( int *socket_file_descriptor, int *port_number,
-        struct sockaddr_in *server_address , char *buffer ,int *msg_length );
+void startingExecution( int *socket_fd , struct sockaddr_in *server_address ,
+        char *buffer , int *msg_length );
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number );
 int stablishConnection( int socket_fd , struct sockaddr_in *client_address );
+void finishingExecution( int server_socket , int slave_socket , char *buffer );
+int communicationService( int slave_socket , struct sockaddr_in *client_address,
+        char *buffer , int msg_length );
 void error( char * msg );
 
 int main( int argc , char **argv ){
@@ -40,7 +43,7 @@ int main( int argc , char **argv ){
     /* struct sockaddr_in contém endereço de rede */
     struct sockaddr_in server_address , client_address;
 
-    startingExecution( &socket_server_id , &port_number, &server_address, &msg_length );
+    startingExecution( &socket_server_id , &server_address, buffer , &msg_length );
     int slave_socket = stablishConnection( socket_server_id , &client_address );
     /* Se foi criado um socket escravo para comunicar com o cliente */
     if( slave_socket > 0 ){
@@ -58,7 +61,9 @@ startingExecution()
 Cria um socket para o servidor e prepara o endereço de rede do servidor
 chamando a função setUpNetworkAddress(), ao término da execução o servidor
 está apto para a função stablishConnection()
-
+RECEBE
+    char *buffer: Ponteiro para um buffer que será alocado dinamicamente, é
+            retornado por REFERÊNCIA
 RETORNA
     int *socket_fd (REFERÊNCIA): inteiro que identifica o descritor de arquivo
         do socket do servidor
@@ -69,9 +74,10 @@ RETORNA
     int *msg_length (REFERÊNCIA): endereço da variável que armazena o tamanho
             das mensagens (e do buffer).
 *******************************************************************************/
-void startingExecution( int *socket_fd , int *port_number,
-        struct sockaddr_in *server_address , char *buffer , int *msg_length ){
+void startingExecution( int *socket_fd , struct sockaddr_in *server_address ,
+        char *buffer , int *msg_length ){
 
+    int port_number;
     *socket_fd = socket( PF_INET , SOCK_STREAM , 0 );
 
     /* Se não foi possível criar um socket */
@@ -83,10 +89,11 @@ void startingExecution( int *socket_fd , int *port_number,
     printf( "Entre com o tamanho em kbytes de cada mensagem\n" ,
             "Para mensagem de um byte, entre com zero: " );
     scanf( "%d" , msg_length );
-    if( msg_length == 0 ){
-        msg_length = 1;
-    }else if( msg_length > 0 ){
-        msg_length *= ONE_KB;
+    if( *msg_length == 0 ){
+        *msg_length = 1;
+        buffer = (char*) malloc( sizeof(char) );
+    }else if( *msg_length > 0 ){
+        *msg_length *= ONE_KB;
         buffer = (char *) malloc( sizeof(char) * (*msg_length)  );
         if( buffer == NULL ){
             error( "Não foi possível alocar memória para o buffer" );
@@ -95,8 +102,11 @@ void startingExecution( int *socket_fd , int *port_number,
         error( "Tamanho de messagem inválido" );
     }
     printf( "Entre com a porta que o servidor deverá escutar: ");
-    scanf( "%d" , port_number );
-    setUpNetworkAddress( server_address , *port_number );
+    scanf( "%d" , &port_number );
+    if( port_number < 1 ){
+        error( "Valor de porta inválido" );
+    }
+    setUpNetworkAddress( server_address , port_number );
     /* bind() associa o endereço (server_address) ao socket, também chamado de
         atribuição de nomeação ao socket, o sizeof deve ser com o VALOR de
         server_address, pois sizeof( sever_address ) é o tamanho de um endereço de memória */
@@ -107,7 +117,7 @@ void startingExecution( int *socket_fd , int *port_number,
     return;
 }
 
-/******************************************************************************
+/*******************************************************************************
 settingUpNetworkAddress()
 Configura a struct responsável pelo endereço de rede(struct sockaddr_in)
 para que seja utilizado corretamente nas system calls de socket
@@ -173,17 +183,42 @@ int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
 
 int communicationService( int slave_socket , struct sockaddr_in *client_address,
         char *buffer , int msg_length ){
-    int cur_iteration = 0;
+    int cur_iteration = 0, num_chars=0;
 
     /* Validação dos parâmetros da função */
-    if( server_socket > 0 && client_socket > 0 && client_address != NULL && buffer != NULL){
+    if( slave_socket > 0 && client_address != NULL && client_address != NULL && buffer != NULL ){
         while( cur_iteration < ITERATIONS ){
             num_chars = read( slave_socket , buffer , msg_length );
-            write( slave_socket ,  );
-
+            /* Deve enviar a mensagem de volta para o cliente */
+            write( slave_socket , buffer , msg_length );
+            cur_iteration++;
         }
+        /* Comunicação concluída com sucesso */
+        return 1;
     }
+    return 0;
+}
+/******************************************************************************
+finishingExecution()
+Fecha descritores de arquivos abertos e desaloca a memória previamente alocada
+para o buffer.
+RECEBE:
+    int server_socket: Descritor de arquivo do socket principal
+    int slave_socket: Descritor de arquivo do socket que troca mensagens com o cliente
+    char *buffer: Buffer de mensagens alocado dinamicamente na função
+            startingExecution()
+******************************************************************************/
+void finishingExecution( int server_socket , int slave_socket , char *buffer ){
 
+    if( server_socket > 0 ){
+        close( server_socket );
+    }
+    if( slave_socket > 0 ){
+        close( server_socket );
+    }
+    if( buffer != NULL ){
+        free( buffer );
+    }
 }
 
 /******************************************************************************
