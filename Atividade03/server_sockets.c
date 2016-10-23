@@ -9,9 +9,7 @@ Dupla:
 O modelo abordado nessa atividade é o modelo cliente/servidor, portanto
 teremos um código para o cliente e um código para o servidor.
 ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
-
 *****************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> /* contém memset()*/
@@ -91,16 +89,15 @@ void startingExecution( int *socket_fd , struct sockaddr_in *server_address ,
     scanf( "%d" , msg_length );
     if( *msg_length == 0 ){
         *msg_length = 1;
-        buffer = (char*) malloc( sizeof(char) );
     }else if( *msg_length > 0 ){
         *msg_length *= ONE_KB;
-        buffer = (char *) malloc( sizeof(char) * (*msg_length)  );
         if( buffer == NULL ){
             error( "Não foi possível alocar memória para o buffer" );
         }
     }else{
         error( "Tamanho de messagem inválido" );
     }
+    buffer = (char *) malloc( sizeof(char) * (*msg_length)  );
     printf( "Entre com a porta que o servidor deverá escutar: ");
     scanf( "%d" , &port_number );
     if( port_number < 1 ){
@@ -134,6 +131,7 @@ void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
         /* Contém endereço IP do host, no caso do servidor é o IP dele mesmo
             nesse caso, INADDR_ANY retorna o IP local */
         address->sin_addr.s_addr = INADDR_ANY;
+        printf("Endereço do servidor:", address->sin_addr.s_addr );
     }
     return;
 }
