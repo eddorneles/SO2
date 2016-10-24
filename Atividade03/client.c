@@ -22,6 +22,8 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O CLIENTE
 #include <strings.h>
 #include <time.h>
 
+#include <arpa/inet.h>
+
 #define ONE_KB 1024
 #define ITERATIONS 1000
 
@@ -37,12 +39,22 @@ char *generateRandomMessage( int msg_length );
 void error( char * msg );
 
 int main(int argc, char *argv[]){
-    int *socket_fd, port_number , *msg_length;
-    struct sockaddr_in *server_address;
+    int socket_fd, port_number , msg_length;
+    struct sockaddr_in server_address;
 
     char *buffer;
 
-    startingClient(socket_fd, server_address, buffer, msg_length);
+    startingClient(&socket_fd, &server_address, buffer, &msg_length);
+
+    buffer = (char *) malloc( sizeof(char) * (msg_length) );
+
+    if( buffer == NULL ){
+        error( "Não foi possível criar o buffer de mensagens");
+    }
+
+    clientCommunication(socket_fd, &server_address, buffer, msg_length);
+
+    finishingClientExecution(socket_fd, buffer);
 
     return 0;
 }
@@ -68,24 +80,15 @@ void startingClient( int *client_socket , struct sockaddr_in  *server_address ,
         error("Tamanho de mensagem inválido");
     }
 
-    buffer = (char*) malloc( sizeof(char)*(*msg_length));
-
-    *client_socket = socket( PF_INET , SOCK_STREAM , 0 );
+    *client_socket = socket( AF_INET , SOCK_STREAM , 0 );
 
     if( *client_socket < 0 ){
         error( "Falha ao criar o socket cliente" );
     }
 
-    buffer = (char *) malloc( sizeof(char) * (*msg_length) );
-
-    if( buffer == NULL ){
-        error( "Não foi possível criar o buffer de mensagens");
-    }
-
     setupClient( &server , server_address , port_number );
 
-    if( connect( *client_socket , (struct sockaddr*) server_address ,
-            sizeof(server_address)  ) < 0 ){
+    if( connect( *client_socket , (struct sockaddr*) server_address , sizeof(*server_address)  ) < 0 ){
         error( "Não foi possível se conectar ao servidor");
     }
 }
@@ -93,10 +96,15 @@ void startingClient( int *client_socket , struct sockaddr_in  *server_address ,
 void setupClient( struct hostent *server , struct sockaddr_in *server_address ,
         int port_number ){
 
-    server = gethostbyname( "localhost" );
-    memset( server_address , 0 , sizeof(server_address) );
-    memcpy( (void*) server->h_addr ,  (void*)server_address->sin_addr.s_addr , server->h_length );
-    server_address->sin_port = htons( port_number );
+    memset(server_address, 0, sizeof(server_address));
+    (*server_address).sin_family = AF_INET;
+    (*server_address).sin_port = htons(port_number);
+    (*server_address).sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    //server = gethostbyname( "localhost" );
+    //memset( server_address , 0 , sizeof(server_address) );
+    //memcpy( (void*) server->h_addr ,  (void*)server_address->sin_addr.s_addr , server->h_length );
+    //server_address->sin_port = htons( port_number );
 }
 
 void clientCommunication( int client_socket , struct sockaddr_in *server_address ,
@@ -105,15 +113,20 @@ void clientCommunication( int client_socket , struct sockaddr_in *server_address
     char *msg=NULL;
 
     if( client_socket > 0 && server_address != NULL && buffer != NULL ){
-        while( cur_iteration <= ITERATIONS ){
+        while( cur_iteration <= 1 ){
             msg = generateRandomMessage( msg_length );
             if( msg != NULL){
-                write( client_socket , msg , msg_length );
+                puts(msg);
+                //write( client_socket , msg , msg_length );
+                if (send(client_socket, msg, strlen(msg), 0) < 0) {
+                    error("Erro ao enviar mensagem!");
+                }
                 memset( buffer , 0 , msg_length );
                 read( client_socket , buffer , msg_length );
                 free(msg);
             }
-            printf( "Mensagem %d: %s" , cur_iteration , buffer );
+            puts(msg);
+            //printf( "Mensagem %d: %s" , cur_iteration , buffer );
             cur_iteration++;
         }
     }
@@ -128,6 +141,7 @@ char *generateRandomMessage( int msg_length ){
     if( msg != NULL ){
         while( i < msg_length-1 ){
             msg[i] = rand() % 256;
+            i++;
         }
         msg[msg_length-1] = '\0';
         return msg;

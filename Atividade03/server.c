@@ -18,6 +18,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 #include <sys/socket.h> /* inclui estruturas necessárias para os sockets */
 #include <netinet/in.h> /* contém constantes e estruturas necessárias para endereços
                             de domínio da internet */
+#include <arpa/inet.h>
 
 #define ONE_KB 1024
 #define ITERATIONS 1000
@@ -46,10 +47,9 @@ int main( int argc , char **argv ){
     slave_socket = stablishConnection( socket_server_id , &client_address );
     /* Se foi criado um socket escravo para comunicar com o cliente */
     if( slave_socket > 0 ){
-        memset ( buffer , 0 , msg_length );
-        buffer = (char *)malloc(msg_length * ONE_KB * sizeof(char));
+        buffer = (char *)malloc(msg_length * sizeof(char));
         if(buffer != NULL){
-            if((nbytes_read = recv(socket_server_id, buffer, (msg_length * ONE_KB), 0)) == -1){
+            if((nbytes_read = recv(slave_socket, buffer, (msg_length), 0)) == -1){
                 error("Erro ao receber mensagem!");
             }
             buffer[nbytes_read] = '\0';
@@ -86,7 +86,7 @@ void startingExecution( int *socket_fd , struct sockaddr_in *server_address ,
         char *buffer , int *msg_length ){
 
     int port_number;
-    *socket_fd = socket( PF_INET , SOCK_STREAM , 0 );
+    *socket_fd = socket( AF_INET , SOCK_STREAM , 0 );
 
     /* Se não foi possível criar um socket */
     if( socket < 0 ){
@@ -134,14 +134,14 @@ RETORNA
 *******************************************************************************/
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
     if( address != NULL ){
-        address->sin_family = PF_INET;
+        address->sin_family = AF_INET;
          /* htons = host to newtork o número da porta deve ser convertido para
          ordem de bytes de rede, LITTLE ENDIAN (padrão Intel) */
         address->sin_port = htons(port_number);
         /* Contém endereço IP do host, no caso do servidor é o IP dele mesmo
             nesse caso, INADDR_ANY retorna o IP local */
-        address->sin_addr.s_addr = INADDR_ANY;
-        printf("Endereço do servidor:", address->sin_addr.s_addr );
+        address->sin_addr.s_addr = inet_addr("127.0.0.1");
+        printf("Endereço do servidor: %d", address->sin_addr.s_addr );
     }
     return;
 }
