@@ -23,7 +23,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 #define ONE_KB 1024
 #define ITERATIONS 1000
 
-void startingExecution( int *socket_fd , struct sockaddr_in *server_address , char *buffer , int *msg_length );
+void startingExecution( int *socket_fd , struct sockaddr_in *server_address , char *buffer , int *msg_length, int port_number );
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number );
 int stablishConnection( int socket_fd , struct sockaddr_in *client_address );
 void finishingExecution( int server_socket , int slave_socket , char *buffer );
@@ -34,41 +34,54 @@ int main( int argc , char **argv ){
     int socket_server_id = -1; /* Será o descritor que identifica o socket do servidor */
     int msg_length,
         port_number = 0, /* armazena o número que o servidor escutar */
-        client_addr_len, /* tamanho do endereço do cliente */
         nbytes_read; /* número de bytes lidos ou escritos */
     char *buffer;
     /* struct sockaddr_in contém endereço de rede */
     struct sockaddr_in server_address , client_address;
 
-    startingExecution( &socket_server_id , &server_address, buffer , &msg_length );
+    if(argc < 3){
+        error("Erro nos argumentos da aplicacao! <porta> <tamanho da mensagem em KB>");
+    }
+    port_number = atoi(argv[1]);
+    msg_length = atoi(argv[2]);
+    if(port_number < 1024 || msg_length < 1){
+        error("Um ou mais argumentos invalidos!");
+    }
+
+    startingExecution( &socket_server_id , &server_address, buffer , &msg_length, port_number );
 
     int slave_socket;
+    int i = 0;
 
 
     slave_socket = stablishConnection( socket_server_id , &client_address );
         /* Se foi criado um socket escravo para comunicar com o cliente */
     if( slave_socket > 0 ){
-        while(1){
+        //recebe apenas 1000 mensagens
+        while(i < 1000){
             buffer = (char *)malloc(msg_length * sizeof(char));
             if(buffer != NULL){
                 if((nbytes_read = recv(slave_socket, buffer, (msg_length), 0)) == -1){
-                    //error("Erro ao receber mensagem!");
+                    error("Erro ao receber mensagem!\n");
                     break;
                 }
                 buffer[nbytes_read] = '\0';
-                printf(buffer);
+                puts(buffer);
+                fflush(stdout);
             }else{
-                error("Erro ao alocar buffer!");
+                error("Erro ao alocar buffer!\n");
             }
             free(buffer);
+            i++;
         }
     }
     if( socket_server_id != -1 ){
         close( socket_server_id );
     }
 
+    printf( "\nTerminou a execução com sucesso!\n" );
 
-    printf( "Terminou a execução com sucesso!\n" );
+    return 0;
 }
 
 /*******************************************************************************
@@ -90,42 +103,29 @@ RETORNA
             das mensagens (e do buffer).
 *******************************************************************************/
 void startingExecution( int *socket_fd , struct sockaddr_in *server_address ,
-        char *buffer , int *msg_length ){
+        char *buffer , int *msg_length, int port_number ){
 
-    int port_number;
     *socket_fd = socket( AF_INET , SOCK_STREAM , 0 );
 
     /* Se não foi possível criar um socket */
     if( socket < 0 ){
-        error("ERRO ao abrir socket");
+        error("ERRO ao abrir socket\n");
     }
     /* memset seta todos os valores de server_address para 0 */
-    memset( server_address , 0 , sizeof(server_address) );
-    printf( "Entre com o tamanho em kbytes de cada mensagem\n" ,
-            "Para mensagem de um byte, entre com zero: " );
-    scanf( "%d" , msg_length );
-    if( *msg_length == 0 ){
-        *msg_length = 1;
-    }else if( *msg_length > 0 ){
-        *msg_length *= ONE_KB;
-        if( buffer == NULL ){
-            error( "Não foi possível alocar memória para o buffer" );
-        }
-    }else{
-        error( "Tamanho de messagem inválido" );
+    memset( server_address , 0 , sizeof(*server_address) );
+
+    *msg_length *= ONE_KB;
+    buffer = (char *) malloc( sizeof(char) * (*msg_length) );
+    if( buffer == NULL ){
+        error( "Não foi possível alocar memória para o buffer\n" );
     }
-    buffer = (char *) malloc( sizeof(char) * (*msg_length)  );
-    printf( "Entre com a porta que o servidor deverá escutar: ");
-    scanf( "%d" , &port_number );
-    if( port_number < 1 ){
-        error( "Valor de porta inválido" );
-    }
+
     setUpNetworkAddress( server_address , port_number );
     /* bind() associa o endereço (server_address) ao socket, também chamado de
         atribuição de nomeação ao socket, o sizeof deve ser com o VALOR de
         server_address, pois sizeof( sever_address ) é o tamanho de um endereço de memória */
     if( bind( *socket_fd , (struct sockaddr *) server_address, sizeof( *server_address ) ) < 0 ){
-        error( "ERRO ao atribuir nome ao socket" );
+        error( "ERRO ao atribuir nome ao socket\n" );
     }
     /* se tudo ocorrer como esperado,  */
     return;
@@ -148,7 +148,7 @@ void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
         /* Contém endereço IP do host, no caso do servidor é o IP dele mesmo
             nesse caso, INADDR_ANY retorna o IP local */
         address->sin_addr.s_addr = inet_addr("127.0.0.1");
-        printf("Endereço do servidor: %d", address->sin_addr.s_addr );
+        printf("Escutando na porta %d no endereco 127.0.0.1!\n", port_number );
     }
     return;
 }
