@@ -44,23 +44,30 @@ int main( int argc , char **argv ){
 
     int slave_socket;
 
+
     slave_socket = stablishConnection( socket_server_id , &client_address );
-    /* Se foi criado um socket escravo para comunicar com o cliente */
+        /* Se foi criado um socket escravo para comunicar com o cliente */
     if( slave_socket > 0 ){
-        buffer = (char *)malloc(msg_length * sizeof(char));
-        if(buffer != NULL){
-            if((nbytes_read = recv(slave_socket, buffer, (msg_length), 0)) == -1){
-                error("Erro ao receber mensagem!");
+        while(1){
+            buffer = (char *)malloc(msg_length * sizeof(char));
+            if(buffer != NULL){
+                if((nbytes_read = recv(slave_socket, buffer, (msg_length), 0)) == -1){
+                    //error("Erro ao receber mensagem!");
+                    break;
+                }
+                buffer[nbytes_read] = '\0';
+                printf(buffer);
+            }else{
+                error("Erro ao alocar buffer!");
             }
-            buffer[nbytes_read] = '\0';
-            printf(buffer);
-        }else{
-            error("Erro ao alocar buffer!");
+            free(buffer);
         }
     }
     if( socket_server_id != -1 ){
         close( socket_server_id );
     }
+
+
     printf( "Terminou a execução com sucesso!\n" );
 }
 

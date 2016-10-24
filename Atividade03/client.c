@@ -23,6 +23,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O CLIENTE
 #include <time.h>
 
 #include <arpa/inet.h>
+#include <sys/time.h>
 
 #define ONE_KB 1024
 #define ITERATIONS 1000
@@ -111,24 +112,29 @@ void clientCommunication( int client_socket , struct sockaddr_in *server_address
         char *buffer, int msg_length ){
     int cur_iteration=1;
     char *msg=NULL;
+    time_t start, end;
 
     if( client_socket > 0 && server_address != NULL && buffer != NULL ){
-        while( cur_iteration <= 1 ){
+        time(&start);
+        while( cur_iteration <= ITERATIONS ){
             msg = generateRandomMessage( msg_length );
             if( msg != NULL){
                 puts(msg);
                 //write( client_socket , msg , msg_length );
+
                 if (send(client_socket, msg, strlen(msg), 0) < 0) {
                     error("Erro ao enviar mensagem!");
                 }
-                memset( buffer , 0 , msg_length );
-                read( client_socket , buffer , msg_length );
+
+                //memset( buffer , 0 , msg_length );
+                //read( client_socket , buffer , msg_length );
                 free(msg);
             }
-            puts(msg);
             //printf( "Mensagem %d: %s" , cur_iteration , buffer );
             cur_iteration++;
         }
+        time(&end);
+        printf("Tempo total apos %d mensagens enviadas: %f", ITERATIONS, difftime(end, start));
     }
 }
 
