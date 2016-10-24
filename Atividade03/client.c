@@ -99,19 +99,6 @@ void clientCommunication( int client_socket , struct sockaddr_in *server_address
         while( cur_iteration <= ITERATIONS ){
             msg = generateRandomMessage( msg_length );
             if( msg != NULL ){
-                puts(msg);
-                fflush(stdout);
-                /*if(write(client_socket, msg, strlen(msg)) < 0){
-                    error("Erro ao enviar mensagem para o servidor!\n");
-                }
-                buffer = (char *)malloc(msg_length * sizeof(char));
-                if(read(client_socket, buffer, strlen(buffer)) < 0){
-                    error("Erro ao ler mensagem do servidor!\n");
-                }
-                puts(buffer);
-                fflush(stdout);
-                free(buffer);
-                free(msg);*/
                 if (send(client_socket, msg, strlen(msg), 0) < 0) {
                     error("Erro ao enviar mensagem!");
                 }
@@ -121,13 +108,10 @@ void clientCommunication( int client_socket , struct sockaddr_in *server_address
                 if(buffer == NULL){
                     error("Erro ao alocar buffer!\n");
                 }
-                /// Implementar recepcao de resposta do servidor
                 if((nbytes_read = recv(client_socket, buffer, msg_length, 0)) == -1){
                     error("Erro ao receber resposta do servidor!\n");
                 }
                 buffer[nbytes_read] = '\0';
-                puts(buffer);
-                fflush(stdout);
             }else{
                 error("Erro ao criar mensagem para envio!\n");
             }
