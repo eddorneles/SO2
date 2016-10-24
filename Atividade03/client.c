@@ -25,7 +25,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O CLIENTE
 #include <sys/time.h>
 
 #define ONE_KB 1024
-#define ITERATIONS 1000
+#define ITERATIONS 1
 
 
 void startingClient( int *client_socket , struct sockaddr_in  *server_address, int port_number );
@@ -90,23 +90,48 @@ void setupClient( struct sockaddr_in *server_address , int port_number ){
 }
 
 void clientCommunication( int client_socket , struct sockaddr_in *server_address, int msg_length ){
-    int cur_iteration=1;
-    char *msg = NULL;
+    int cur_iteration = 1, nbytes_read = 0;
+    char *msg = NULL, *buffer = NULL;
     time_t t_start, t_end;
 
     if( client_socket > 0 && server_address != NULL){
         time(&t_start);
         while( cur_iteration <= ITERATIONS ){
             msg = generateRandomMessage( msg_length );
-            if( msg != NULL){
+            if( msg != NULL ){
                 puts(msg);
+                fflush(stdout);
+                /*if(write(client_socket, msg, strlen(msg)) < 0){
+                    error("Erro ao enviar mensagem para o servidor!\n");
+                }
+                buffer = (char *)malloc(msg_length * sizeof(char));
+                if(read(client_socket, buffer, strlen(buffer)) < 0){
+                    error("Erro ao ler mensagem do servidor!\n");
+                }
+                puts(buffer);
+                fflush(stdout);
+                free(buffer);
+                free(msg);*/
                 if (send(client_socket, msg, strlen(msg), 0) < 0) {
                     error("Erro ao enviar mensagem!");
                 }
                 free(msg);
+
+                buffer = (char *)malloc(msg_length * sizeof(char));
+                if(buffer == NULL){
+                    error("Erro ao alocar buffer!\n");
+                }
+                /// Implementar recepcao de resposta do servidor
+                if((nbytes_read = recv(client_socket, buffer, msg_length, 0)) == -1){
+                    error("Erro ao receber resposta do servidor!\n");
+                }
+                buffer[nbytes_read] = '\0';
+                puts(buffer);
+                fflush(stdout);
+            }else{
+                error("Erro ao criar mensagem para envio!\n");
             }
             cur_iteration++;
-            fflush(stdout);
         }
         time(&t_end);
         printf("Tempo total apos %d mensagens enviadas: %f", ITERATIONS, difftime(t_end, t_start));
