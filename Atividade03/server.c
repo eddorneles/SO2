@@ -21,43 +21,40 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O SERVIDOR
 #include <arpa/inet.h>
 
 #define ONE_KB 1024
-#define ITERATIONS 1
+#define ITERATIONS 1000
 
-void startingExecution( int *socket_fd , struct sockaddr_in *server_address, int *msg_length, int port_number );
+void startingExecution( int *socket_fd , struct sockaddr_in *server_address, int port_number );
 void setUpNetworkAddress( struct sockaddr_in *address , int port_number );
 int stablishConnection( int socket_fd , struct sockaddr_in *client_address );
-int communicationService( int slave_socket , struct sockaddr_in *client_address , int msg_length );
+int communicationService( int slave_socket , struct sockaddr_in *client_address );
 void finishingExecution( int server_socket , int slave_socket );
 void error( char * msg );
 
 int main( int argc , char **argv ){
     int socket_server_id = -1; /* Será o descritor que identifica o socket do servidor */
-    int msg_length,
-        port_number = 0; /* armazena o número que o servidor escutar */
+    int port_number = 0; /* armazena o número que o servidor escutar */
     /* struct sockaddr_in contém endereço de rede */
     struct sockaddr_in server_address , client_address;
 
-    if(argc < 3){
+    if(argc < 2){
         error("Erro nos argumentos da aplicacao! <porta> <tamanho da mensagem em KB>");
     }
     port_number = atoi(argv[1]);
-    msg_length = atoi(argv[2]);
-    if(port_number < 1024 || msg_length < 1){
-        error("Um ou mais argumentos invalidos!");
+    if(port_number < 1024 ){
+        error("Porta invalida!");
     }
 
-    startingExecution( &socket_server_id , &server_address , &msg_length, port_number );
+    startingExecution( &socket_server_id , &server_address , port_number );
 
     int slave_socket;
 
     slave_socket = stablishConnection( socket_server_id , &client_address );
     /* Se foi criado um socket escravo para comunicar com o cliente */
 
-    if( slave_socket > 0 && communicationService(slave_socket, &client_address, msg_length) == 1){
+    if( slave_socket > 0 && communicationService(slave_socket, &client_address) == 1){
         printf("\nMensagens trocadas com sucesso!\n");
     }else{
-        printf("\nFalha do servidor ao trocar mensagens!\n");
-        return 0;
+        error("\nFalha do servidor ao trocar mensagens!\n");
     }
 
     if( socket_server_id != -1 ){
@@ -89,7 +86,7 @@ RETORNA
     int *msg_length (REFERÊNCIA): endereço da variável que armazena o tamanho
             das mensagens (e do buffer).
 *******************************************************************************/
-void startingExecution( int *socket_fd , struct sockaddr_in *server_address , int *msg_length, int port_number ){
+void startingExecution( int *socket_fd , struct sockaddr_in *server_address , int port_number ){
 
     *socket_fd = socket( AF_INET , SOCK_STREAM , 0 );
 
@@ -99,8 +96,6 @@ void startingExecution( int *socket_fd , struct sockaddr_in *server_address , in
     }
     /* memset seta todos os valores de server_address para 0 */
     memset( server_address , 0 , sizeof(*server_address) );
-
-    *msg_length *= ONE_KB;
 
     setUpNetworkAddress( server_address , port_number );
     /* bind() associa o endereço (server_address) ao socket, também chamado de
@@ -178,19 +173,23 @@ int stablishConnection( int socket_fd , struct sockaddr_in *client_address ){
 
 }
 
-int communicationService( int slave_socket , struct sockaddr_in *client_address, int msg_length ){
-    int cur_iteration = 1;
+int communicationService( int slave_socket , struct sockaddr_in *client_address ){
+    int cur_iteration = 1, max_length = 0, nbytes_read = 0;
     char *buffer = NULL;
-    int nbytes_read = 0;
 
     /* Validação dos parâmetros da função */
     if( slave_socket > 0 && client_address != NULL && client_address != NULL ){
+
+        if((nbytes_read = recv(slave_socket, &max_length, sizeof(int), 0)) == -1){
+            error("Erro ao receber tamanho das mensagens do cliente!\n");
+        }
+        printf("\n\nTAMANHO DAS MENSAGENS: %d\n\n", max_length);
         while( cur_iteration <= ITERATIONS ){
-            buffer = (char *) malloc( sizeof(char) * (msg_length) );
+            buffer = (char *) malloc( sizeof(char) * max_length * ONE_KB );
             if( buffer == NULL ){
                 error( "Não foi possível alocar memória para o buffer\n" );
             }
-            if((nbytes_read = recv(slave_socket, buffer, (msg_length), 0)) == -1){
+            if((nbytes_read = recv(slave_socket, buffer, max_length * ONE_KB, 0)) == -1){
                 error("Erro ao receber mensagem!\n");
             }
             buffer[nbytes_read] = '\0';
@@ -216,7 +215,7 @@ RECEBE:
     char *buffer: Buffer de mensagens alocado dinamicamente na função
             startingExecution()
 ******************************************************************************/
-void finishingExecution( int server_socket , int slave_socket , char *buffer ){
+void finishingExecution( int server_socket , int slave_socket ){
 
     if( server_socket > 0 ){
         close( server_socket );

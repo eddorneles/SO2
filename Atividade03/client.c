@@ -25,7 +25,7 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O CLIENTE
 #include <sys/time.h>
 
 #define ONE_KB 1024
-#define ITERATIONS 1
+#define ITERATIONS 1000
 
 
 void startingClient( int *client_socket , struct sockaddr_in  *server_address, int port_number );
@@ -90,13 +90,18 @@ void setupClient( struct sockaddr_in *server_address , int port_number ){
 }
 
 void clientCommunication( int client_socket , struct sockaddr_in *server_address, int msg_length ){
-    int cur_iteration = 1, nbytes_read = 0;
+    int cur_iteration = 1, nbytes_read = 0, max_length = (msg_length / ONE_KB);
     char *msg = NULL, *buffer = NULL;
     time_t t_start, t_end;
+    float time_mili = 0.0;
 
     if( client_socket > 0 && server_address != NULL){
-        time(&t_start);
+
+        if(send(client_socket, &max_length, sizeof(max_length), 0) < 0){
+            error("Erro ao enviar tamanho das mensagens ao servidor!\n");
+        }
         while( cur_iteration <= ITERATIONS ){
+            time(&t_start);
             msg = generateRandomMessage( msg_length );
             if( msg != NULL ){
                 if (send(client_socket, msg, strlen(msg), 0) < 0) {
@@ -116,9 +121,12 @@ void clientCommunication( int client_socket , struct sockaddr_in *server_address
                 error("Erro ao criar mensagem para envio!\n");
             }
             cur_iteration++;
+            time(&t_end);
+            time_mili += difftime(t_end, t_start);
         }
-        time(&t_end);
-        printf("Tempo total apos %d mensagens enviadas: %f", ITERATIONS, difftime(t_end, t_start));
+
+        printf("Tempo total apos %d mensagens enviadas: %f", ITERATIONS, time_mili);
+        printf("\nTamanho das mensagens enviadas: %d bytes\n", msg_length);
     }
 }
 
