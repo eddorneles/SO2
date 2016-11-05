@@ -28,9 +28,9 @@ ESTE CÓDIGO ESTÁ DESTINADO PARA O CLIENTE
 #define ITERATIONS 1000
 
 
-void startingClient( int *client_socket , struct sockaddr_in  *server_address, int port_number );
+void startingClient( int *client_socket , struct sockaddr_in  *server_address, int port_number , char *ip_server);
 
-void setupClient( struct sockaddr_in *server_address, int port_number );
+void setupClient( struct sockaddr_in *server_address, int port_number , char *ip_server );
 
 char *generateRandomMessage( int msg_length );
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
 
     srand(time(NULL));
 
-    startingClient(&socket_fd, &server_address, port_number);
+    startingClient(&socket_fd, &server_address, port_number, ip_server);
 
     clientCommunication(socket_fd, &server_address, msg_length);
 
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-void startingClient( int *client_socket , struct sockaddr_in  *server_address , int port_number ){
+void startingClient( int *client_socket , struct sockaddr_in  *server_address , int port_number , char *ip_server ){
 
     *client_socket = socket( AF_INET , SOCK_STREAM , 0 );
 
@@ -73,19 +73,23 @@ void startingClient( int *client_socket , struct sockaddr_in  *server_address , 
         error( "Falha ao criar o socket cliente" );
     }
 
-    setupClient( server_address , port_number );
+    setupClient( server_address , port_number , ip_server );
 
     if( connect( *client_socket , (struct sockaddr*) server_address , sizeof(*server_address)  ) < 0 ){
         error( "Não foi possível se conectar ao servidor");
     }
 }
 
-void setupClient( struct sockaddr_in *server_address , int port_number ){
+void setupClient( struct sockaddr_in *server_address , int port_number , char *ip_server){
 
     memset(server_address, 0, sizeof(*server_address));
-    (*server_address).sin_family = AF_INET;
-    (*server_address).sin_port = htons(port_number);
-    (*server_address).sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_address->sin_family = AF_INET;
+    server_address->sin_port = htons(port_number);
+    //server_address->sin_addr.s_addr = inet_addr("127.0.0.1");
+    if(inet_pton(AF_INET, ip_server, &(server_address->sin_addr))<=0)
+    {
+        error("Erro na funcao inet_pton");
+    }
 
 }
 

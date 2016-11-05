@@ -37,7 +37,7 @@ int main( int argc , char **argv ){
     struct sockaddr_in server_address , client_address;
 
     if(argc < 2){
-        error("Erro nos argumentos da aplicacao! <porta> <tamanho da mensagem em KB>");
+        error("Erro nos argumentos da aplicacao! <porta>");
     }
     port_number = atoi(argv[1]);
     if(port_number < 1024 ){
@@ -124,7 +124,7 @@ void setUpNetworkAddress( struct sockaddr_in *address , int port_number ){
         address->sin_port = htons(port_number);
         /* Contém endereço IP do host, no caso do servidor é o IP dele mesmo
             nesse caso, INADDR_ANY retorna o IP local */
-        address->sin_addr.s_addr = inet_addr("127.0.0.1");
+        address->sin_addr.s_addr = htonl(INADDR_ANY);
         printf("Escutando na porta %d no endereco 127.0.0.1!\n", port_number );
     }
     return;
@@ -183,7 +183,7 @@ int communicationService( int slave_socket , struct sockaddr_in *client_address 
         if((nbytes_read = recv(slave_socket, &max_length, sizeof(int), 0)) == -1){
             error("Erro ao receber tamanho das mensagens do cliente!\n");
         }
-        printf("\n\nTAMANHO DAS MENSAGENS: %d\n\n", max_length);
+        printf("\n\nTAMANHO DAS MENSAGENS: %d\n\n", max_length * ONE_KB);
         while( cur_iteration <= ITERATIONS ){
             buffer = (char *) malloc( sizeof(char) * max_length * ONE_KB );
             if( buffer == NULL ){
